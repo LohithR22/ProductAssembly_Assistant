@@ -1,0 +1,356 @@
+/* 1. DEFINE THEMES (White/Red Light & Dark) */
+/* 1. DEFINE THEMES (White/Red Light & Dark) */
+:root {
+  --bg: linear-gradient(180deg, #ffffff 0%, #fef8f8 100%);
+  --card: #ffffff;
+  --surface: #f3f4f6;
+  --border-color: rgba(0, 0, 0, 0.08);
+
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  
+  --accent: #ef4444; /* Red */
+  --accent-gradient: linear-gradient(90deg, #ef4444, #f87171);
+  --accent-danger: #dc2626;
+
+  --bubble-bot: #ffffff;
+  --bubble-user: #f3f4f6;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 6px 18px rgba(100, 100, 100, 0.05);
+  --shadow-lg: 0 10px 25px rgba(100, 100, 100, 0.08);
+}
+
+body.dark {
+  --bg: linear-gradient(180deg, #071029 0%, #081227 100%);
+  --card: #0b1220;
+  --surface: rgba(255, 255, 255, 0.02);
+  --border-color: rgba(255, 255, 255, 0.04);
+
+  --text: #e6eef8;
+  --text-muted: #9aa4b2;
+
+  --bubble-bot: linear-gradient(180deg, #071328, #07203a);
+  --bubble-user: linear-gradient(180deg, #1b2a44, #122036);
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 6px 18px rgba(2, 6, 23, 0.4);
+  --shadow-lg: 0 10px 25px rgba(2, 6, 23, 0.5);
+}
+
+/* 2. GENERAL STYLING & TRANSITIONS */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: var(--bg);
+  color: var(--text);
+  /* ⭐ MODERN: Smooth theme change transition */
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+/* ⭐ MODERN: Main app card with smooth border */
+.app {
+  max-width: 980px;
+  margin: 28px auto;
+  padding: 24px;
+  background: var(--card);
+  border-radius: 20px; /* Smoother border */
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+  transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+/* 3. HEADER & GRADIENT TEXT */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.4s ease;
+}
+
+/* ⭐ MODERN: Gradient text for title */
+header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.subtitle { color: var(--text-muted); margin: 0; }
+
+.theme-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* ⭐ MODERN: Button transition */
+  transition: all 0.2s ease-out;
+}
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-md);
+}
+
+/* 4. CHAT BUBBLES & ANIMATIONS */
+.chat { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; min-height: 320px; }
+.welcome {
+  background: var(--surface);
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.4s ease;
+}
+.welcome h3 { margin-top: 0; color: var(--text); }
+
+.chat { overflow: auto; padding: 10px 6px; }
+.bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  /* ⭐ ANIMATION: Keep your existing fadeInUp */
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeInUp .18s ease forwards;
+  /* ⭐ MODERN: Add smooth transition for hover */
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+/* ⭐ MODERN: Subtle hover lift effect */
+.bubble:hover {
+  transform: translateY(4px) scale(1.01);
+  box-shadow: var(--shadow-lg);
+}
+
+.bubble.bot {
+  align-self: flex-start;
+  background: var(--bubble-bot);
+  border: 1px solid var(--border-color);
+  transition: all 0.4s ease;
+}
+.bubble.user {
+  align-self: flex-end;
+  background: var(--bubble-user);
+  border: 1px solid var(--border-color);
+  transition: all 0.4s ease;
+}
+.bubble .bubble-content { color: var(--text); }
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: white;
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+  /* ⭐ MODERN: Add transition */
+  transition: transform 0.2s ease-out;
+}
+.bubble-row:hover .avatar {
+  transform: scale(1.05);
+}
+
+/* 5. COMPOSER & INPUTS */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  transition: border-color 0.4s ease;
+}
+.inputs { display: flex; gap: 8px; align-items: flex-start; }
+.file-col { display: flex; flex-direction: column; gap: 8px; flex: 0 0 72px; }
+
+.inputs textarea {
+  flex: 1;
+  min-height: 96px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  /* ⭐ MODERN: Transition for focus */
+  transition: all 0.2s ease-out;
+}
+.inputs textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent);
+  outline: none;
+}
+.preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.4s ease;
+}
+.preview img { max-width: 100%; max-height: 100%; object-fit: cover; }
+
+.prompt-row { display: flex; align-items: center; gap: 8px; flex: 1; }
+.prompt-row textarea { flex: 1; min-height: 72px; }
+
+.attach {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  border: none;
+  background: var(--bubble-user);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  /* ⭐ MODERN: Button transition */
+  transition: all 0.2s ease-out;
+}
+.attach:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.actions { display: flex; justify-content: flex-end; }
+.send {
+  background: var(--accent-gradient);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  /* ⭐ MODERN: Button transition */
+  transition: all 0.2s ease-out;
+}
+.send:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-lg);
+}
+.send:active {
+  transform: scale(0.98);
+}
+.send:disabled { opacity: 0.6; transform: none; box-shadow: none; }
+
+/* 6. UTILITIES & ANIMATIONS */
+footer { margin-top: 18px; color: var(--text-muted); }
+.error { color: var(--accent-danger); }
+.user-image img { max-width: 220px; max-height: 220px; border-radius: 8px; display: block; }
+
+/* Typing animation */
+.typing { display: inline-flex; gap: 6px; padding: 6px; }
+.typing span { width: 8px; height: 8px; background: var(--text-muted); border-radius: 50%; opacity: 0.9; animation: typingDot 1s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.12s; }
+.typing span:nth-child(3) { animation-delay: 0.24s; }
+@keyframes typingDot { 0% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(-6px); opacity: 1; } 100% { transform: translateY(0); opacity: 0.4; } }
+
+/* Bubble entrance animation */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Step-by-step list animation */
+.steps li {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: stepFade .32s cubic-bezier(.2, .9, .2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 0.08s);
+}
+@keyframes stepFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.error { color: var(--accent-danger); }
+
+/* --- Add these new styles --- */
+
+/* ⭐ UPDATE: Add position: relative to the app */
+.app {
+  /* keep existing rules, but ensure positioning for the overlay */
+  position: relative;
+  overflow: hidden; /* To keep overlay borders nice */
+}
+
+/* ⭐ UPDATE: Style for the new SVG icon */
+.attach svg {
+  /* The SVG will now inherit the button's text color */
+  color: var(--text);
+  transition: color 0.4s ease;
+}
+
+/* ⭐ ADD: Drag-and-drop overlay styles */
+.drop-zone-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  
+  /* Use a semi-transparent version of the accent */
+  background: rgba(239, 68, 68, 0.1); 
+  border: 3px dashed var(--accent);
+  border-radius: 20px; /* Match the app border-radius */
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Hide by default */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  
+  /* Smooth transition */
+  transition: all 0.2s ease-out;
+  backdrop-filter: blur(4px);
+  
+  z-index: 1000;
+}
+
+/* Show when dragging */
+.drop-zone-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.drop-zone-content {
+  text-align: center;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.drop-zone-content svg {
+  width: 64px;
+  height: 64px;
+  stroke: var(--accent);
+  margin-bottom: 8px;
+}
+
+/* Update Welcome text */
+.welcome p {
+  line-height: 1.6;
+}

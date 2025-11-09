@@ -1,0 +1,25 @@
+
+# Web / server
+fastapi>=0.95.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
+
+# Google Gemini client
+google-generativeai>=0.3.0
+
+# Vector DB + embeddings
+chromadb>=0.3.24
+sentence-transformers>=2.2.2
+transformers>=4.30.0
+
+# LangChain and extras
+langchain>=0.0.300
+langchain-community>=0.0.13
+langchain-text-splitters>=0.1.9
+langchain-huggingface>=0.0.6
+
+# PDF loader and env
+pypdf>=3.14.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+
