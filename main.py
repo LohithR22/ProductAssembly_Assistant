@@ -229,9 +229,10 @@ def _analyze_image_with_gemini(image_b64: str, user_text: Optional[str] = None) 
     # build a clear prompt asking Gemini to return structured short JSON
     prompt = (
         "You are an expert product assembly assistant. "
-        "Analyze the provided image and the user's short prompt and reply with a concise JSON object:"
-        " {\"product\": \"<product name>\", \"stage\": \"<short stage description>\"}."
-        " Only output the JSON object with those two keys. Be brief."
+        "Analyze the provided image. Return a concise JSON object with two keys: "
+        "1. 'product': The name of the product (e.g., 'Wooden Cabinet'). "
+        "2. 'parts_list': A list of strings, each naming and 'marking' a visible part using text (e.g., 'A: Left side panel', 'B: Top panel'). "
+        "Only output the JSON object."
     )
     if user_text:
         prompt = f"User query: {user_text}\n\n" + prompt
@@ -274,8 +275,9 @@ def _analyze_image_with_gemini(image_b64: str, user_text: Optional[str] = None) 
                     parsed = json.loads(txt)
                     prod = parsed.get("product") or parsed.get("Product") or ""
                     stage = parsed.get("stage") or parsed.get("Stage") or ""
-                    logger.info("Parsed Gemini JSON: product=%s stage=%s", prod, stage)
-                    return {"product": prod, "stage": stage, "raw_text": text}
+                    parts_list = parsed.get("parts_list") or []
+                    logger.info("Parsed Gemini JSON: product=%s stage=%s parts_list=%s", prod, stage, parts_list)
+                    return {"product": prod, "stage": stage, "parts_list": parts_list, "raw_text": text}
                 except Exception:
                     logger.exception("Failed to parse JSON from Gemini SDK response; falling back to heuristic parsing")
                     # try heuristic: look for 'Product:' and 'Stage:' patterns in the raw text
@@ -286,10 +288,10 @@ def _analyze_image_with_gemini(image_b64: str, user_text: Optional[str] = None) 
                         if m:
                             prod = m.group(1).strip()
                             stage = m.group(2).strip()
-                            return {"product": prod, "stage": stage, "raw_text": text}
+                            return {"product": prod, "stage": stage, "parts_list": [], "raw_text": text}
                     except Exception:
                         logger.exception("Heuristic product/stage extraction failed")
-                    return {"product": "", "stage": "", "raw_text": text}
+                    return {"product": "", "stage": "", "parts_list": [], "raw_text": text}
             except Exception:
                 logger.exception("Gemini SDK call failed; will try REST fallback")
     except Exception:
@@ -339,8 +341,9 @@ def _analyze_image_with_gemini(image_b64: str, user_text: Optional[str] = None) 
                     parsed = json.loads(text)
                     prod = parsed.get("product") or parsed.get("Product") or ""
                     stage = parsed.get("stage") or parsed.get("Stage") or ""
-                    logger.info("Parsed Gemini REST JSON: product=%s stage=%s", prod, stage)
-                    return {"product": prod, "stage": stage, "raw_text": text}
+                    parts_list = parsed.get("parts_list") or []
+                    logger.info("Parsed Gemini REST JSON: product=%s stage=%s, parts_list=%s", prod, stage, parts_list)
+                    return {"product": prod, "stage": stage, "parts_list": parts_list, "raw_text": text}
                 except Exception:
                     logger.exception("Failed to parse JSON from REST response; falling back to heuristic parsing")
                     try:
@@ -350,15 +353,15 @@ def _analyze_image_with_gemini(image_b64: str, user_text: Optional[str] = None) 
                         if m:
                             prod = m.group(1).strip()
                             stage = m.group(2).strip()
-                            return {"product": prod, "stage": stage, "raw_text": text}
+                            return {"product": prod, "stage": stage, "parts_list": [], "raw_text": text}
                     except Exception:
                         logger.exception("Heuristic product/stage extraction failed")
-                    return {"product": "", "stage": "", "raw_text": text}
+                    return {"product": "", "stage": "", "parts_list": [], "raw_text": text}
         except Exception:
             pass
 
     # 3) Final fallback: return an empty structured result indicating we received the image
-    return {"product": "", "stage": "", "raw_text": ""}
+    return {"product": "", "stage": "", "parts_list": [], "raw_text": ""}
 
 
 def _generate_step_by_step(image_b64: Optional[str], image_desc: Optional[str], retrieved_text: str, chat_history: List[Dict[str, str]], user_text: str, max_tokens: int = 512) -> str:
@@ -397,21 +400,25 @@ def _generate_step_by_step(image_b64: Optional[str], image_desc: Optional[str], 
     prompt_parts.append(f"User question: {user_text or 'Please provide the next assembly step.'}")
 
     prompt_parts.append(
-        "You are an expert product assembly assistant. Your goal is to **always** provide a safe, **helpful, and detailed** response."
+        "You are an expert product assembly assistant. The user has just told you what kind of instructions they want."
         "\n\n"
-        "1. Look at the `Relevant context from manuals`. **If it perfectly matches** the `Chat history` and `User question`, use it to provide the next steps."
-        "2. **If the context is irrelevant, confusing, or missing,** completely ignore it."
-        "3. Instead, use your general knowledge of product assembly to answer the `User question` based on the `Chat history` and `Image analysis`."
+        "**Analyze the User's Choice (from the last message):**"
+        "\n"
+        "-   If the user asks for **'detailed steps'** or **'start to finish'** or **'1'**, provide a complete, comprehensive, step-by-step assembly guide from the very beginning to the end."
+        "-   If the user asks for an **'overview'** or **'brief steps'** or **'2'**, provide a high-level, bulleted list of the main assembly stages (e.g., 1. Attach legs, 2. Install shelves, 3. Mount doors)."
+        "-   If the user asks for the **'first step'** or **'just the start'** or **'3'**, provide *only* the very first assembly step, but in full detail."
+        "\n\n"
+        "**Context to use:**"
+        "\n"
+        "-   Use the 'Relevant context from manuals' and your general knowledge to build the guide."
+        "-   The 'Image analysis' and 'Chat history' tell you the product and parts."
+        "\n\n"
+        "**CRITICAL RULE: You must *only* use parts from the 'Visible Parts List' mentioned in the chat history. Do not invent any parts.**"
         "\n\n"
         "**Formatting Rules:**"
         "\n"
-        "- **If you are providing multiple, distinct assembly actions,** use a numbered list."
-        "\n"
-        "- **If you are providing a single instruction, a simple check, or a text-based answer (like 'You are working on a cabinet'),** respond in natural prose. **Do not use a number** for a single-step answer."
-        "\n"
-        "- Use Markdown (like `**bold**`) to emphasize key parts or tools."
-        "\n\n"
-        "**Crucially: Never state that you don't have the context** or that the manual is wrong. Just provide the next best helpful answer."
+        "-   Use Markdown for all formatting (e.g., `**bold**`, numbered lists)."
+        "-   If you cannot create a logical guide with *only* the listed parts, explain politely that the assembly cannot be completed."
     )
 
     final_prompt = "\n\n".join(prompt_parts)
@@ -489,8 +496,8 @@ def _generate_step_by_step(image_b64: Optional[str], image_desc: Optional[str], 
         logger.exception("REST fallback for step-by-step generation failed or not configured")
 
     # final stub structured response
-    logger.warning("Using genai step stub response")
-    return {"product": prod or "", "stage": stage or "", "steps": [], "raw_text": final_prompt}
+    logger.error("All generation paths failed. Returning error to user.")
+    return {"product": prod or "", "stage": stage or "", "steps": [], "raw_text": "Error with Gemini API. Please try again."}
 
 
 def _generate_step_by_step_stream(image_b64: Optional[str], image_desc: Optional[str], retrieved_text: str, chat_history: List[Dict[str, str]], user_text: str):
@@ -512,7 +519,7 @@ def _generate_step_by_step_stream(image_b64: Optional[str], image_desc: Optional
 
         if not sdk_present:
             # nothing to stream
-            yield f"data: {json.dumps({'type':'error','message':'SDK not available for streaming'})}\n\n"
+            yield f"data: {json.dumps({'type':'error','message':'Error with Gemini API. Please try again.'})}\n\n"
             return
 
         client = genai.Client()
@@ -544,8 +551,25 @@ def _generate_step_by_step_stream(image_b64: Optional[str], image_desc: Optional
             prompt_parts.append(f"Chat history:\n{hist}")
         prompt_parts.append(f"User question: {user_text or 'Please provide the next assembly step.'}")
         prompt_parts.append(
-            "Please produce concise, numbered, step-by-step assembly instructions for the next immediate action. "
-            "Only include actionable steps; avoid long explanations. If the image or context is insufficient, say so briefly and provide a safe next action."
+            "You are an expert product assembly assistant. The user has just told you what kind of instructions they want."
+            "\n\n"
+            "**Analyze the User's Choice (from the last message):**"
+            "\n"
+            "-   If the user asks for **'detailed steps'** or **'start to finish'** or **'1'**, provide a complete, comprehensive, step-by-step assembly guide from the very beginning to the end."
+            "-   If the user asks for an **'overview'** or **'brief steps'** or **'2'**, provide a high-level, bulleted list of the main assembly stages (e.g., 1. Attach legs, 2. Install shelves, 3. Mount doors)."
+            "-   If the user asks for the **'first step'** or **'just the start'** or **'3'**, provide *only* the very first assembly step, but in full detail."
+            "\n\n"
+            "**Context to use:**"
+            "\n"
+            "-   Use the 'Relevant context from manuals' and your general knowledge to build the guide."
+            "-   The 'Image analysis' and 'Chat history' tell you the product and parts."
+            "\n\n"
+            "**CRITICAL RULE: You must *only* use parts from the 'Visible Parts List' mentioned in the chat history. Do not invent any parts.**"
+            "\n\n"
+            "**Formatting Rules:**"
+            "\n"
+            "-   Use Markdown for all formatting (e.g., `**bold**`, numbered lists)."
+            "-   If you cannot create a logical guide with *only* the listed parts, explain politely that the assembly cannot be completed."
         )
         final_prompt = "\n\n".join(prompt_parts)
 
@@ -556,7 +580,7 @@ def _generate_step_by_step_stream(image_b64: Optional[str], image_desc: Optional
         except TypeError:
             # SDK might not accept stream kwarg
             logger.exception("SDK does not support stream=True")
-            yield f"data: {json.dumps({'type':'error','message':'SDK stream unsupported'})}\n\n"
+            yield f"data: {json.dumps({'type':'error','message':'Error with Gemini API. Please try again.'})}\n\n"
             return
 
         full_text = ""
@@ -590,7 +614,7 @@ def _generate_step_by_step_stream(image_b64: Optional[str], image_desc: Optional
         return
     except Exception:
         logger.exception("Unexpected error in streaming generator")
-        yield f"data: {json.dumps({'type':'error','message':'internal server error'})}\n\n"
+        yield f"data: {json.dumps({'type':'error','message':'Error with Gemini API. Please try again.'})}\n\n"
 
 
 def _orchestrate_assist_stream(user_text: str = "", image_b64: Optional[str] = None, chat_history: Optional[List[Dict[str, str]]] = None, k: int = 3):
